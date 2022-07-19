@@ -20,3 +20,5 @@ Please Note(Optional, we do not need all):
 - Please try with any open source library if necessary;
 - Comments and file names should be in English;
 - Please make sure the source code can be easily deployed to our PC or server.
+
+## Set Up
