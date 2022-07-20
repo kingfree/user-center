@@ -1,16 +1,16 @@
 use axum::{
     extract::Extension,
-    middleware::{self, Next},
-    routing::{delete, get, post, put},
+    middleware,
+    routing::{get, post},
     Router, Server,
 };
 use migration::{Migrator, MigratorTrait};
-use sea_orm::{prelude::*, Database};
+use sea_orm::Database;
 use std::str::FromStr;
 use std::{env, net::SocketAddr};
 use tower::ServiceBuilder;
-use tower_http::cors::{Any, CorsLayer};
-use user_center::{session, user};
+use tower_http::cors::CorsLayer;
+use user_center::{group, session, user};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -31,17 +31,21 @@ async fn main() -> anyhow::Result<()> {
 
     let users = Router::new()
         .route("/", get(user::list).post(user::create))
+        .route(
+            "/:id",
+            get(user::detail).put(user::update).delete(user::delete),
+        )
         .route_layer(middleware::from_fn(session::auth));
-    // .route(
-    //     "/:id",
-    //     get(user::detail).put(user::update).delete(user::delete),
-    // );
+    let groups = Router::new()
+        .route("/", get(group::list))
+        .route_layer(middleware::from_fn(session::auth));
     let app = Router::new()
         .nest(
             "/api",
             Router::new()
                 .route("/login", post(session::login))
-                .nest("/user", users),
+                .nest("/user", users)
+                .nest("/group", groups),
         )
         .layer(ServiceBuilder::new().layer(Extension(conn)))
         .layer(cors);

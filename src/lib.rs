@@ -2,8 +2,9 @@ use axum::extract::Json;
 use axum::http::StatusCode;
 use sea_orm::prelude::*;
 
-pub mod user;
+pub mod group;
 pub mod session;
+pub mod user;
 
 pub type ResErr = (StatusCode, &'static str);
 pub type Res<T> = core::result::Result<Json<T>, ResErr>;
