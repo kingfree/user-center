@@ -24,7 +24,7 @@ Please Note(Optional, we do not need all):
 ## Usage
 
 ```bash
-docker-compose up
+docker-compose up -d
 ```
 
 It will serve on [http://localhost:8082](http://localhost:8082).
