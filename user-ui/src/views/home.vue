@@ -98,8 +98,12 @@ const title = computed(() => {
   return form.id ? 'Edit User' : 'Create User'
 })
 async function editUser(row) {
-  const { data } = await request.get('/user/' + row.id);
-  Object.assign(form, data);
+  if (row.id) {
+    const { data } = await request.get('/user/' + row.id);
+    Object.assign(form, data);
+  } else {
+    Object.assign(form, row);
+  }
   showModal.value = true;
 }
 function createUser() {
