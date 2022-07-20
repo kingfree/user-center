@@ -19,7 +19,7 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Group::Name).string().not_null())
-                    .col(ColumnDef::new(Group::IsAdmin).boolean().not_null())
+                    .col(ColumnDef::new(Group::Level).integer().not_null())
                     .to_owned(),
             )
             .await
@@ -38,5 +38,5 @@ pub enum Group {
     Table,
     Id,
     Name,
-    IsAdmin,
+    Level,
 }

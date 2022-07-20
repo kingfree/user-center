@@ -9,7 +9,7 @@ use std::str::FromStr;
 use std::{env, net::SocketAddr};
 use tower::ServiceBuilder;
 use tower_http::cors::{Any, CorsLayer};
-use user_center::user;
+use user_center::{session, user};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -36,7 +36,12 @@ async fn main() -> anyhow::Result<()> {
     //     get(user::detail).put(user::update).delete(user::delete),
     // );
     let app = Router::new()
-        .nest("/api", Router::new().nest("/user", users))
+        .nest(
+            "/api",
+            Router::new()
+                .route("/login", post(session::login))
+                .nest("/user", users),
+        )
         .layer(ServiceBuilder::new().layer(Extension(conn)))
         .layer(cors);
 

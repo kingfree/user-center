@@ -6,11 +6,12 @@ authors = ["Kingfree Ten <kingfree@toyama.moe>"]
 publish = false
 
 [workspace]
-members = [".", "entity", "migration"]
+members = [".", "entity", "migration", "util"]
 
 [dependencies]
 entity = { path = "entity" }
 migration = { path = "migration" }
+util = { path = "util" }
 
 tokio = { version = "^1.20.0", features = ["full"] }
 axum = "^0.5.13"
@@ -25,3 +26,7 @@ tower = "^0.4.13"
 tower-http = { version = "^0.3.4", features = ["cors"] }
 serde = "^1.0.110"
 serde_json = "^1.0.82"
+jwt = "^0.16.0"
+hmac = "0.12.1"
+sha2 = "0.10.0"
+lazy_static = "^1.4.0"
