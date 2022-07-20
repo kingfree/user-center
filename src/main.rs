@@ -1,16 +1,15 @@
 use axum::{
-    extract::{Extension, Query},
-    response::Json,
-    routing::get,
+    extract::Extension,
+    routing::{delete, get, post, put},
     Router, Server,
 };
-use entity::{prelude::*, user};
 use migration::{Migrator, MigratorTrait};
-use sea_orm::{prelude::*, Database, QueryOrder};
-use serde::{Deserialize, Serialize};
+use sea_orm::{prelude::*, Database};
 use std::str::FromStr;
 use std::{env, net::SocketAddr};
 use tower::ServiceBuilder;
+use tower_http::cors::{Any, CorsLayer};
+use user_center::user;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -26,31 +25,23 @@ async fn main() -> anyhow::Result<()> {
         .expect("Database connection failed");
     Migrator::up(&conn, None).await.unwrap();
 
+    let cors = CorsLayer::new()
+        .allow_methods(Any)
+        .allow_headers(Any)
+        .allow_origin(Any);
+
+    let users = Router::new().route("/", get(user::list).post(user::create));
+    // .route(
+    //     "/:id",
+    //     get(user::detail).put(user::update).delete(user::delete),
+    // );
     let app = Router::new()
-        .nest("/api", Router::new().route("/users", get(list_users)))
-        .layer(ServiceBuilder::new().layer(Extension(conn)));
+        .nest("/api", Router::new().nest("/user", users))
+        .layer(ServiceBuilder::new().layer(Extension(conn)))
+        .layer(cors);
 
     let addr = SocketAddr::from_str(&server_url).unwrap();
     Server::bind(&addr).serve(app.into_make_service()).await?;
 
     Ok(())
-}
-
-#[derive(Deserialize, Serialize)]
-pub struct Params {
-    pi: Option<usize>,
-    ps: Option<usize>,
-}
-
-pub async fn list_users(
-    Extension(ref conn): Extension<DatabaseConnection>,
-    Query(params): Query<Params>,
-) -> Result<Json<Vec<user::Model>>, ()> {
-    let pi = params.pi.unwrap_or(1);
-    let ps = params.ps.unwrap_or(10);
-
-    let sql = User::find().order_by_desc(user::Column::Id);
-    let pager = sql.paginate(conn, ps);
-    let res: Vec<_> = pager.fetch_page(pi - 1).await.unwrap();
-    Ok(Json(res))
 }
