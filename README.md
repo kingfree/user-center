@@ -11,7 +11,7 @@ Please create a small project, which contains below requirements:
 - Optional: Edit and delete a user.
 - Optional: Use less or sass, es6 or typescript.
 - Optional: Use Vuex and vue-router.
- 
+
 Please Note(Optional, we do not need all):
 
 - Please create the UI as beautiful as you can;

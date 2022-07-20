@@ -4,8 +4,6 @@ COPY ./build/config /usr/local/cargo/
 COPY . .
 RUN cargo install --path .
 
-FROM alpine:latest
-WORKDIR /data
+FROM ubuntu:latest
 COPY --from=builder /usr/local/cargo/bin/user-center /usr/local/bin/user-center
-CMD ["user-center"]
-EXPOSE 8000
+CMD user-center

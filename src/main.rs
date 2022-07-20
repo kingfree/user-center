@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
     Migrator::up(&conn, None).await.unwrap();
 
     let app = Router::new()
-        .route("/", get(list_users))
+        .nest("/api", Router::new().route("/users", get(list_users)))
         .layer(ServiceBuilder::new().layer(Extension(conn)));
 
     let addr = SocketAddr::from_str(&server_url).unwrap();

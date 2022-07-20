@@ -12,3 +12,37 @@ services:
       MYSQL_ROOT_PASSWORD: 'password'
     ports:
       - 3306:3306
+
+  app:
+    build: .
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE_URL: "mysql://user:password@db/user_center"
+    ports:
+      - 8000:8000
+    links:
+      - db
+    depends_on:
+      - db
+
+  ui:
+    build: ./user-ui
+    restart: always
+    ports:
+      - 3000:3000
+
+  nginx:
+    image: nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./build/nginx.conf:/etc/nginx/conf.d/default.conf
+    expose:
+      - 80
+    links:
+      - app
+      - ui
+    depends_on:
+      - app
+      - ui
