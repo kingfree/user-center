@@ -11,4 +11,4 @@ path = "src/lib.rs"
 [dependencies]
 # passwords = { version = "^3.1.9", features = ["crypto"] }
 # data-encoding = "^2.3.2"
-sha_crypt = "^0.4.0"
+sha-crypt = "^0.4.0"

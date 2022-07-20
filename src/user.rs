@@ -1,7 +1,8 @@
-use crate::{db_err, Res};
+use crate::{db_err, session::CurrentUser, Res};
 use axum::extract::{Extension, Json, Query};
 use entity::{prelude::*, user};
 use sea_orm::{prelude::*, QueryOrder};
+use sea_orm::{FromQueryResult, JoinType, RelationTrait};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
@@ -10,16 +11,41 @@ pub struct Params {
     ps: Option<usize>,
 }
 
+#[derive(FromQueryResult)]
+pub struct UserDetail {
+    pub id: i32,
+    pub name: String,
+    pub description: String,
+    pub group_id: i32,
+    pub group_name: String,
+    pub level: i32,
+}
+
 pub async fn list(
     Extension(ref conn): Extension<DatabaseConnection>,
-    Query(params): Query<Params>,
-) -> Res<Vec<user::Model>> {
-    let pi = params.pi.unwrap_or(1);
-    let ps = params.ps.unwrap_or(10);
-
-    let sql = User::find().order_by_asc(user::Column::Id);
-    let pager = sql.paginate(conn, ps);
-    let res: Vec<_> = pager.fetch_page(pi - 1).await.map_err(db_err)?;
+    Extension(current_user): Extension<CurrentUser>,
+) -> Res<Vec<UserDetail>> {
+    log::warn!("{:?}", current_user);
+    let res = User::find()
+        .find_also_related(Group)
+        .order_by_asc(user::Column::Id)
+        .all(conn)
+        .await
+        .map_err(db_err)?;
+    let res = res
+        .into_iter()
+        .map(|item| match item {
+            (u, Some(g)) => UserDetail {
+                id: u.id,
+                name: u.name,
+                description: u.description.unwrap_or_else(|| "".to_string()),
+                group_id: g.id,
+                group_name: g.name,
+                level: g.level,
+            },
+            _ => unreachable!(),
+        })
+        .collect();
     Ok(Json(res))
 }
 

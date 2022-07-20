@@ -14,6 +14,7 @@ n-card(title="Login")
 <script setup>
 import { reactive, onMounted } from 'vue'
 import request from '../utils/request'
+import { useMessage } from 'naive-ui'
 
 const form = reactive({
   name: '',
@@ -21,13 +22,17 @@ const form = reactive({
 })
 
 async function fetchList() {
-  const data = await request.get('/user')
+  const { data } = await request.get('/user')
   console.log(data)
 }
 
+const message = useMessage()
+
 async function doLogin() {
-  const data = await request.post('/login', form)
+  const { data } = await request.post('/login', form)
   console.log(data)
+  window.localStorage.setItem('token', data.token)
+  message.success(`Welcome, ${data.name}`)
 }
 </script>
 <style>

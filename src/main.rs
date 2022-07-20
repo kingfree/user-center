@@ -1,5 +1,6 @@
 use axum::{
     extract::Extension,
+    middleware::{self, Next},
     routing::{delete, get, post, put},
     Router, Server,
 };
@@ -14,6 +15,7 @@ use user_center::{session, user};
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenv::dotenv().ok();
+    tracing_subscriber::fmt::init();
 
     let db_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env file");
     let host = env::var("HOST").expect("HOST is not set in .env file");
@@ -25,12 +27,11 @@ async fn main() -> anyhow::Result<()> {
         .expect("Database connection failed");
     Migrator::up(&conn, None).await.unwrap();
 
-    let cors = CorsLayer::new()
-        .allow_methods(Any)
-        .allow_headers(Any)
-        .allow_origin(Any);
+    let cors = CorsLayer::very_permissive().allow_credentials(true);
 
-    let users = Router::new().route("/", get(user::list).post(user::create));
+    let users = Router::new()
+        .route("/", get(user::list).post(user::create))
+        .route_layer(middleware::from_fn(session::auth));
     // .route(
     //     "/:id",
     //     get(user::detail).put(user::update).delete(user::delete),

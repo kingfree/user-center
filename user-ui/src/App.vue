@@ -1,5 +1,6 @@
 <template lang="pug">
-LoginForm
+n-message-provider
+  LoginForm
 </template>
 <script setup>
 import LoginForm from './components/LoginForm.vue'

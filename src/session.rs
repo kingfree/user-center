@@ -17,24 +17,26 @@ use sea_orm::{prelude::*, QueryOrder};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
 use std::collections::BTreeMap;
+use util::verify_password;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct CurrentUser {
     pub id: i32,
     pub name: String,
     pub level: i32,
 }
 
-async fn auth<B>(mut req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
+pub async fn auth<B>(mut req: Request<B>, next: Next<B>) -> Result<Response, StatusCode> {
     let auth_header = req
         .headers()
         .get(http::header::AUTHORIZATION)
-        .and_then(|header| header.to_str().ok());
+        .and_then(|header| header.to_str().ok())
+        .unwrap_or("");
 
-    let auth_header = if let Some(auth_header) = auth_header {
-        auth_header
-    } else {
-        return Err(StatusCode::UNAUTHORIZED);
+    let split = auth_header.split_once(' ');
+    let auth_header = match split {
+        Some((name, contents)) if name == "Bearer" => contents,
+        _ => return Err(StatusCode::BAD_REQUEST),
     };
 
     if let Ok(current_user) = authorize_current_user(auth_header).await {
@@ -48,6 +50,7 @@ async fn auth<B>(mut req: Request<B>, next: Next<B>) -> Result<Response, StatusC
 async fn authorize_current_user(auth_token: &str) -> Result<CurrentUser, ()> {
     let key: Hmac<Sha256> = Hmac::new_from_slice(b"some-secret").map_err(|_| ())?;
     let claims: BTreeMap<String, String> = auth_token.verify_with_key(&key).map_err(|_| ())?;
+    log::info!("{:?}", claims);
     Ok(CurrentUser {
         id: claims["id"].parse().map_err(|_| ())?,
         name: claims["name"].parse().map_err(|_| ())?,
@@ -80,6 +83,10 @@ pub async fn login(
         .map_err(db_err)?;
     match model {
         Some((u, Some(g))) => {
+            if !verify_password(&u.password, &payload.password) {
+                return Err((StatusCode::UNAUTHORIZED, "Password is incorrect"));
+            }
+
             let key: Hmac<Sha256> = Hmac::new_from_slice(b"some-secret").unwrap();
             let mut claims = BTreeMap::new();
             claims.insert("id", u.id.to_string());
@@ -88,6 +95,7 @@ pub async fn login(
             let token = claims
                 .sign_with_key(&key)
                 .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Sign error"))?;
+
             Ok(Json(UserInfo {
                 id: u.id,
                 name: u.name,
