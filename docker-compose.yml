@@ -29,7 +29,7 @@ services:
   ui:
     build: ./user-ui
     volumes:
-      - frontend:/data/dist
+      - frontend:/var/www/html
 
   nginx:
     image: nginx

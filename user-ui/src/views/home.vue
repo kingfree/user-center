@@ -98,16 +98,13 @@ const title = computed(() => {
   return form.id ? 'Edit User' : 'Create User'
 })
 async function editUser(row) {
-  if (row.id) {
-    const { data } = await request.get('/user/' + row.id);
-    Object.assign(form, data);
-  } else {
-    Object.assign(form, row);
-  }
+  const { data } = await request.get('/user/' + row.id);
+  Object.assign(form, data);
   showModal.value = true;
 }
 function createUser() {
-  editUser({ ...EMPTY });
+  Object.assign(form, { ...EMPTY });
+  showModal.value = true;
 }
 function doCancel() {
   showModal.value = false;
