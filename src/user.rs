@@ -1,15 +1,14 @@
 use crate::{db_err, session::CurrentUser, Res};
-use axum::extract::{Extension, Json, Path};
+use axum::extract::{Extension, Json, Path, Query};
 use axum::http::StatusCode;
 use entity::{group, prelude::*, user};
-use sea_orm::FromQueryResult;
-use sea_orm::{prelude::*, QueryOrder, Set};
+use sea_orm::{entity::*, prelude::*, query::*, FromQueryResult, QueryOrder, Set};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
 pub struct Params {
-    pi: Option<usize>,
-    ps: Option<usize>,
+    sort: Option<String>,
+    asc: Option<bool>,
 }
 
 #[derive(FromQueryResult, Deserialize, Serialize)]
@@ -38,15 +37,33 @@ impl UserDetail {
 pub async fn list(
     Extension(ref conn): Extension<DatabaseConnection>,
     Extension(current_user): Extension<CurrentUser>,
+    Query(query): Query<Params>,
 ) -> Res<Vec<UserDetail>> {
     log::warn!("{:?}", current_user);
-    let res = User::find()
+
+    let order = if query.asc.unwrap_or(true) {
+        Order::Asc
+    } else {
+        Order::Desc
+    };
+    let sort = if let Some(sort) = query.sort {
+        match sort.to_ascii_lowercase().trim() {
+            "id" => user::Column::Id,
+            "name" => user::Column::Name,
+            "description" => user::Column::Description,
+            "group_id" => user::Column::GroupId,
+            _ => user::Column::Id,
+        }
+    } else {
+        user::Column::Id
+    };
+    log::info!("sort={sort:?} order={order:?}");
+
+    let sql = User::find()
         .find_also_related(Group)
         .filter(group::Column::Level.lte(current_user.level))
-        .order_by_asc(user::Column::Id)
-        .all(conn)
-        .await
-        .map_err(db_err)?;
+        .order_by(sort, order);
+    let res = sql.all(conn).await.map_err(db_err)?;
     let res = res
         .into_iter()
         .map(|item| match item {
@@ -63,9 +80,13 @@ pub async fn create(
 ) -> Res<()> {
     let mut model = user::ActiveModel::from_json(payload).map_err(db_err)?;
     if let Some(password) = model.password.take() {
-        model.password = Set(util::encode_password(&password));
+        model.password = if password.is_empty() {
+            return Err((StatusCode::BAD_REQUEST, "Password is empty"));
+        } else {
+            Set(util::encode_password(&password))
+        };
     }
-    model.save(conn).await.map_err(db_err)?;
+    model.insert(conn).await.map_err(db_err)?;
     Ok(Json(()))
 }
 
@@ -92,7 +113,12 @@ pub async fn update(
     let mut model = user::ActiveModel::from_json(payload).map_err(db_err)?;
     model.id = Set(id);
     if let Some(password) = model.password.take() {
-        model.password = Set(util::encode_password(&password));
+        log::info!("password=[{}], len={}", password, password.len());
+        model.password = if password.is_empty() {
+            ActiveValue::NotSet
+        } else {
+            Set(util::encode_password(&password))
+        };
     }
     model.save(conn).await.map_err(db_err)?;
     Ok(Json(()))

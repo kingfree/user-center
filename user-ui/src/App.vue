@@ -1,9 +1,11 @@
 <template lang="pug">
 n-message-provider
-  LoginForm
+  .layout
+    router-view
 </template>
 <script setup>
-import LoginForm from './components/LoginForm.vue'
 </script>
-<style>
+<style lang="sass">
+.layout
+  padding: 20px
 </style>
